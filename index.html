@@ -1,0 +1,3124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistema de Gestión de Estacionamiento</title>
+  <meta name="description" content="Aplicación web funcional para el registro, control de espacios y gestión CRUD de vehículos en estacionamiento con Supabase." />
+  <meta property="og:title" content="Sistema de Gestión de Estacionamiento" />
+  <meta property="og:description" content="Aplicación web funcional para el registro, control de espacios y gestión CRUD de vehículos en estacionamiento con Supabase." />
+  <meta property="og:type" content="website" />
+
+  <!-- Tipografía curada: Plus Jakarta Sans (títulos), Public Sans (cuerpo), JetBrains Mono (placas y métricas) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@500;600;700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- SDK oficial de Supabase v2 vía CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg-canvas: #0b0e14;
+      --bg-surface: #121620;
+      --bg-subtle: #181e2b;
+      --bg-hover: #1d2433;
+      --border: #252d3d;
+      --border-strong: #323d52;
+
+      --text-primary: #eef2f7;
+      --text-secondary: #bcc6d6;
+      --text-muted: #8492a8;
+
+      --accent: #3b6fd8;
+      --accent-hover: #2f5ec2;
+      --accent-soft: #17233b;
+      --accent-border: #2a4170;
+
+      --green-text: #6fd4a6;
+      --green-bg: #11211b;
+      --green-border: #1e3a2f;
+
+      --amber-text: #e2b46b;
+      --amber-bg: #221b12;
+      --amber-border: #3d301d;
+
+      --red-text: #e48383;
+      --red-bg: #241417;
+      --red-border: #462328;
+
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+
+      --font-display: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-body: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.55;
+      color: var(--text-primary);
+      background-color: var(--bg-canvas);
+    }
+
+    h1, h2, h3, h4 {
+      margin: 0;
+      font-family: var(--font-display);
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+
+    p {
+      margin: 0;
+    }
+
+    button, input, select, textarea {
+      font-family: inherit;
+      font-size: inherit;
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ================= HEADER (Top Bar Contract: 3 zonas) ================= */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background-color: rgba(11, 14, 20, 0.94);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 32px;
+      height: 64px;
+    }
+
+    .brand-link {
+      font-family: var(--font-display);
+      font-size: 1.0625rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: var(--text-primary);
+      text-decoration: none;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .main-nav {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+
+    .nav-link {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-decoration: none;
+      white-space: nowrap;
+      flex-shrink: 0;
+      padding: 6px 0;
+      border-bottom: 2px solid transparent;
+      transition: color 150ms var(--ease-out), border-color 150ms var(--ease-out);
+    }
+
+    .nav-link:hover,
+    .nav-link.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--accent);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .mobile-menu-btn {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+
+    .mobile-nav-drawer {
+      display: none;
+      border-top: 1px solid var(--border);
+      background: var(--bg-surface);
+      padding: 12px 24px 16px;
+    }
+
+    .mobile-nav-drawer.open {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .mobile-nav-drawer a {
+      padding: 10px 4px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-weight: 500;
+      border-bottom: 1px solid var(--bg-subtle);
+    }
+
+    /* ================= BUTTONS ================= */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 40px;
+      padding: 8px 18px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      font-size: 0.875rem;
+      font-weight: 600;
+      line-height: 1.2;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      text-decoration: none;
+      transition: background-color 150ms var(--ease-out), border-color 150ms var(--ease-out), color 150ms var(--ease-out), transform 120ms var(--ease-out);
+    }
+
+    .btn:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background-color: var(--accent);
+      color: #f8fafc;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background-color: var(--accent-hover);
+    }
+
+    .btn-secondary {
+      background-color: var(--bg-subtle);
+      color: var(--text-primary);
+      border-color: var(--border-strong);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background-color: var(--bg-hover);
+    }
+
+    .btn-ghost {
+      background-color: transparent;
+      color: var(--text-secondary);
+      border-color: transparent;
+      padding: 6px 12px;
+      min-height: 36px;
+    }
+
+    .btn-ghost:hover:not(:disabled) {
+      background-color: var(--bg-subtle);
+      color: var(--text-primary);
+    }
+
+    .btn-success-outline {
+      background-color: var(--green-bg);
+      color: var(--green-text);
+      border-color: var(--green-border);
+      min-height: 34px;
+      padding: 6px 12px;
+      font-size: 0.8125rem;
+    }
+
+    .btn-success-outline:hover:not(:disabled) {
+      background-color: #162c24;
+    }
+
+    .btn-danger-outline {
+      background-color: var(--red-bg);
+      color: var(--red-text);
+      border-color: var(--red-border);
+      min-height: 34px;
+      padding: 6px 12px;
+      font-size: 0.8125rem;
+    }
+
+    .btn-danger-outline:hover:not(:disabled) {
+      background-color: #321b1f;
+    }
+
+    .btn-danger {
+      background-color: #9e2a2b;
+      color: #f8fafc;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background-color: #7f1f20;
+    }
+
+    .btn-sm {
+      min-height: 34px;
+      padding: 6px 12px;
+      font-size: 0.8125rem;
+    }
+
+    /* ================= HERO & KPI STRIP ================= */
+    .hero-section {
+      padding: 40px 0 28px;
+      border-bottom: 1px solid var(--border);
+      background-color: var(--bg-surface);
+    }
+
+    .hero-top {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .hero-copy {
+      max-width: 720px;
+    }
+
+    .kicker {
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .hero-title {
+      font-size: clamp(1.85rem, 3.2vw, 2.5rem);
+      font-weight: 700;
+      line-height: 1.15;
+      text-wrap: balance;
+      margin-bottom: 12px;
+    }
+
+    .hero-desc {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      max-width: 64ch;
+      line-height: 1.6;
+    }
+
+    .db-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .db-status-text {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      padding: 7px 12px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      white-space: nowrap;
+    }
+
+    .db-status-text strong {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      margin-top: 28px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background-color: var(--bg-canvas);
+      overflow: hidden;
+    }
+
+    .kpi-cell {
+      padding: 18px 20px;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .kpi-cell:last-child {
+      border-right: none;
+    }
+
+    .kpi-label {
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .kpi-value {
+      font-family: var(--font-display);
+      font-size: 1.75rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-primary);
+      line-height: 1.1;
+    }
+
+    .kpi-sub {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ================= MAIN WORKSPACE ================= */
+    .main-content {
+      padding: 32px 0 64px;
+      display: flex;
+      flex-direction: column;
+      gap: 36px;
+    }
+
+    .workspace-split {
+      display: grid;
+      grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
+      gap: 28px;
+      align-items: start;
+    }
+
+    .panel {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+    }
+
+    .panel-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    /* ================= FORM & VALIDATION ================= */
+    .form-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .field-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .req-mark {
+      color: var(--red-text);
+      margin-left: 2px;
+    }
+
+    .inline-link-btn {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent);
+      cursor: pointer;
+    }
+
+    .inline-link-btn:hover {
+      text-decoration: underline;
+    }
+
+    .input,
+    .select {
+      width: 100%;
+      min-height: 42px;
+      padding: 9px 12px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      background-color: var(--bg-subtle);
+      color: var(--text-primary);
+      font-size: 0.9375rem;
+      transition: border-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
+    }
+
+    .input-mono {
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .input:focus,
+    .select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(59, 111, 216, 0.24);
+    }
+
+    .input.is-invalid,
+    .select.is-invalid {
+      border-color: var(--red-text);
+      background-color: #1f1316;
+    }
+
+    .mode-switch {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 4px;
+      padding: 4px;
+      background-color: var(--bg-canvas);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 18px;
+    }
+
+    .mode-tab {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background-color 150ms var(--ease-out), color 150ms var(--ease-out);
+    }
+
+    .mode-tab:hover {
+      color: var(--text-primary);
+    }
+
+    .mode-tab.active {
+      background-color: var(--bg-subtle);
+      color: var(--text-primary);
+      border: 1px solid var(--border-strong);
+    }
+
+    .exit-preview-box {
+      background-color: var(--bg-canvas);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .exit-preview-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .exit-preview-row strong {
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+
+    .field-error {
+      font-size: 0.8125rem;
+      color: var(--red-text);
+      min-height: 18px;
+      display: none;
+    }
+
+    .field-error.visible {
+      display: block;
+    }
+
+    .form-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    .form-actions .btn-primary {
+      flex: 1;
+    }
+
+    .alert-banner {
+      display: none;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      font-size: 0.875rem;
+      line-height: 1.45;
+      margin-bottom: 16px;
+    }
+
+    .alert-banner.visible {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .alert-banner.success {
+      background-color: var(--green-bg);
+      border-color: var(--green-border);
+      color: var(--green-text);
+    }
+
+    .alert-banner.error {
+      background-color: var(--red-bg);
+      border-color: var(--red-border);
+      color: var(--red-text);
+    }
+
+    .alert-close {
+      background: none;
+      border: none;
+      color: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 0 4px;
+      line-height: 1;
+    }
+
+    /* ================= SPACES GRID ================= */
+    .spaces-legend {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      border: 1px solid transparent;
+    }
+
+    .legend-swatch.available {
+      background-color: var(--green-bg);
+      border-color: var(--green-text);
+    }
+
+    .legend-swatch.occupied {
+      background-color: var(--amber-bg);
+      border-color: var(--amber-text);
+    }
+
+    .spaces-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .space-tile {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      min-height: 106px;
+      padding: 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background-color: var(--bg-surface);
+      text-align: left;
+      cursor: pointer;
+      transition: border-color 150ms var(--ease-out), background-color 150ms var(--ease-out), transform 120ms var(--ease-out);
+    }
+
+    .space-tile:hover {
+      transform: translateY(-1px);
+    }
+
+    .space-tile.available {
+      border-color: var(--green-border);
+      background-color: var(--green-bg);
+    }
+
+    .space-tile.available:hover {
+      border-color: var(--green-text);
+    }
+
+    .space-tile.available.selected {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+      border-color: var(--accent);
+    }
+
+    .space-tile.occupied {
+      border-color: var(--amber-border);
+      background-color: var(--amber-bg);
+    }
+
+    .space-tile.occupied:hover {
+      border-color: var(--amber-text);
+    }
+
+    .space-top {
+      width: 100%;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .space-code {
+      font-family: var(--font-mono);
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .space-state {
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .space-tile.available .space-state {
+      color: var(--green-text);
+    }
+
+    .space-tile.occupied .space-state {
+      color: var(--amber-text);
+    }
+
+    .space-meta {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+    }
+
+    .space-plate {
+      font-family: var(--font-mono);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-top: 2px;
+    }
+
+    /* ================= RECORDS TABLE & FILTERS ================= */
+    .table-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .table-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .search-input {
+      min-width: 240px;
+      min-height: 38px;
+      padding: 7px 12px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      background-color: var(--bg-subtle);
+      color: var(--text-primary);
+      font-size: 0.875rem;
+    }
+
+    .segmented-filter {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px;
+      background-color: var(--bg-canvas);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+
+    .filter-tab {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background-color 150ms var(--ease-out), color 150ms var(--ease-out);
+    }
+
+    .filter-tab:hover {
+      color: var(--text-primary);
+    }
+
+    .filter-tab.active {
+      background-color: var(--bg-subtle);
+      color: var(--text-primary);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 820px;
+      background-color: var(--bg-surface);
+    }
+
+    thead th {
+      text-align: left;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background-color: var(--bg-canvas);
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    tbody td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+      font-size: 0.875rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr:hover {
+      background-color: var(--bg-hover);
+    }
+
+    .plate-cell {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    .mono-cell {
+      font-family: var(--font-mono);
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .status-text {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .status-text.activo {
+      color: var(--green-text);
+    }
+
+    .status-text.finalizado {
+      color: var(--text-secondary);
+    }
+
+    .row-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .text-right {
+      text-align: right;
+    }
+
+    /* Empty & Loading states */
+    .state-box {
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--text-secondary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .state-title {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .skeleton-line {
+      height: 16px;
+      border-radius: 4px;
+      background: linear-gradient(90deg, #181e2b 25%, #232b3d 50%, #181e2b 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.2s infinite linear;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* ================= MODALS ================= */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      background-color: rgba(4, 6, 10, 0.76);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-dialog {
+      width: 100%;
+      max-width: 520px;
+      max-height: 90vh;
+      overflow-y: auto;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.65);
+    }
+
+    .modal-dialog.wide {
+      max-width: 680px;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 14px;
+      margin-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+    }
+
+    .modal-close {
+      width: 34px;
+      height: 34px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-subtle);
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 1.1rem;
+      line-height: 1;
+    }
+
+    .modal-close:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .modal-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .sql-block {
+      background-color: #090c11;
+      border: 1px solid var(--border);
+      color: #cbd5e1;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      line-height: 1.55;
+      padding: 16px;
+      border-radius: var(--radius-md);
+      overflow-x: auto;
+      max-height: 300px;
+      white-space: pre;
+      margin-top: 10px;
+    }
+
+    .confirm-box-details {
+      background-color: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      margin-top: 12px;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    /* ================= TOAST ================= */
+    .toast-region {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 80;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 360px;
+      pointer-events: none;
+    }
+
+    .toast {
+      pointer-events: auto;
+      background-color: #1b2230;
+      border: 1px solid var(--border-strong);
+      color: #eef2f7;
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      font-weight: 500;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      animation: toast-in 180ms var(--ease-out);
+    }
+
+    .toast.success {
+      background-color: #132820;
+      border-color: #214536;
+      color: #a7e8cb;
+    }
+
+    .toast.error {
+      background-color: #2b1518;
+      border-color: #54282e;
+      color: #f3b2b2;
+    }
+
+    @keyframes toast-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ================= FOOTER ================= */
+    .site-footer {
+      border-top: 1px solid var(--border);
+      background-color: var(--bg-surface);
+      padding: 20px 0;
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    /* ================= RESPONSIVE ================= */
+    @media (max-width: 1024px) {
+      .workspace-split {
+        grid-template-columns: 1fr;
+      }
+      .spaces-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 0 16px;
+      }
+      .main-nav {
+        display: none;
+      }
+      .header-actions .btn-primary {
+        display: none;
+      }
+      .mobile-menu-btn {
+        display: inline-flex;
+      }
+      .kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .kpi-cell:nth-child(2) {
+        border-right: none;
+      }
+      .kpi-cell:nth-child(1),
+      .kpi-cell:nth-child(2) {
+        border-bottom: 1px solid var(--border);
+      }
+      .spaces-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .search-input {
+        width: 100%;
+      }
+      .table-controls {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Barra de navegación superior (3 zonas) -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="#inicio" class="brand-link">Estacionamiento Central</a>
+
+      <nav class="main-nav" aria-label="Navegación principal">
+        <a href="#inicio" class="nav-link active">Inicio</a>
+        <a href="#registro" class="nav-link">Registro</a>
+        <a href="#espacios" class="nav-link">Espacios</a>
+        <a href="#vehiculos" class="nav-link">Vehículos</a>
+      </nav>
+
+      <div class="header-actions">
+        <button type="button" id="headerCtaBtn" class="btn btn-primary">Registrar Movimiento</button>
+        <button type="button" id="mobileMenuBtn" class="mobile-menu-btn" aria-label="Abrir menú" aria-expanded="false">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="4" y1="6" x2="20" y2="6"></line>
+            <line x1="4" y1="12" x2="20" y2="12"></line>
+            <line x1="4" y1="18" x2="20" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="mobileNavDrawer" class="mobile-nav-drawer">
+      <a href="#inicio">Inicio</a>
+      <a href="#registro">Entradas y salidas</a>
+      <a href="#espacios">Mapa de espacios</a>
+      <a href="#vehiculos">Vehículos registrados</a>
+    </div>
+  </header>
+
+  <!-- Sección Inicio / Resumen Operativo -->
+  <section id="inicio" class="hero-section">
+    <div class="container">
+      <div class="hero-top">
+        <div class="hero-copy">
+          <p class="kicker">
+            <span>Control vehicular</span>
+            <span aria-hidden="true">·</span>
+            <span>Ocupación de bahías en tiempo real</span>
+          </p>
+          <h1 class="hero-title">Sistema de Gestión de Estacionamiento</h1>
+          <p class="hero-desc">
+            Administra el ingreso y salida de vehículos, asigna espacios disponibles en tiempo real y consulta el historial completo de ocupación con persistencia en PostgreSQL mediante Supabase.
+          </p>
+        </div>
+
+        <div class="db-toolbar">
+          <span id="dbStatusBadge" class="db-status-text">Origen: <strong>Verificando...</strong></span>
+          <button type="button" id="openConfigBtn" class="btn btn-secondary btn-sm">Configurar Supabase</button>
+        </div>
+      </div>
+
+      <!-- Franja KPI de 4 columnas -->
+      <div class="kpi-grid" aria-label="Indicadores de ocupación">
+        <div class="kpi-cell">
+          <span class="kpi-label">Espacios Totales</span>
+          <span id="kpiTotalSpaces" class="kpi-value">0</span>
+          <span class="kpi-sub">Zonas Norte y Sur habilitadas</span>
+        </div>
+        <div class="kpi-cell">
+          <span class="kpi-label">Espacios Disponibles</span>
+          <span id="kpiAvailableSpaces" class="kpi-value" style="color: var(--green-text);">0</span>
+          <span id="kpiAvailableSub" class="kpi-sub">Listos para asignación</span>
+        </div>
+        <div class="kpi-cell">
+          <span class="kpi-label">Espacios Ocupados</span>
+          <span id="kpiOccupiedSpaces" class="kpi-value" style="color: var(--amber-text);">0</span>
+          <span id="kpiOccupancyRate" class="kpi-sub">0% de ocupación</span>
+        </div>
+        <div class="kpi-cell">
+          <span class="kpi-label">Total de Registros</span>
+          <span id="kpiTotalRecords" class="kpi-value">0</span>
+          <span id="kpiFinishedSub" class="kpi-sub">0 salidas finalizadas</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contenido principal -->
+  <main class="container main-content">
+    <!-- Fila 1: Formulario de Ingreso + Mapa de Espacios -->
+    <div class="workspace-split">
+      <!-- Formulario CREAR (Entrada) y ACTUALIZAR (Salida) -->
+      <section id="registro" class="panel" aria-labelledby="formHeading">
+        <div class="panel-header">
+          <div>
+            <h2 id="formHeading" class="panel-title">Control de Entradas y Salidas</h2>
+            <p class="panel-subtitle" id="formSubtitle">Registra el ingreso o la salida de un vehículo.</p>
+          </div>
+        </div>
+
+        <div class="mode-switch" role="tablist" aria-label="Tipo de movimiento">
+          <button type="button" id="modeEntryBtn" class="mode-tab active" data-mode="entry" role="tab" aria-selected="true">Registrar Entrada</button>
+          <button type="button" id="modeExitBtn" class="mode-tab" data-mode="exit" role="tab" aria-selected="false">Registrar Salida</button>
+        </div>
+
+        <div id="formAlert" class="alert-banner" role="status" aria-live="polite">
+          <span id="formAlertText"></span>
+          <button type="button" id="formAlertClose" class="alert-close" aria-label="Cerrar mensaje">&times;</button>
+        </div>
+
+        <!-- Formulario de Entrada -->
+        <form id="entryForm" class="form-grid" novalidate>
+          <div class="field">
+            <label for="placaInput" class="field-label">Placa / Matrícula <span class="req-mark">*</span></label>
+            <input
+              type="text"
+              id="placaInput"
+              name="placa"
+              class="input input-mono"
+              placeholder="Ej. ABC-1234"
+              maxlength="12"
+              autocomplete="off"
+              required
+            />
+            <span id="placaError" class="field-error"></span>
+          </div>
+
+          <div class="field">
+            <label for="marcaInput" class="field-label">Marca / Modelo del vehículo <span class="req-mark">*</span></label>
+            <input
+              type="text"
+              id="marcaInput"
+              name="marca_modelo"
+              class="input"
+              placeholder="Ej. Toyota Corolla"
+              maxlength="60"
+              autocomplete="off"
+              required
+            />
+            <span id="marcaError" class="field-error"></span>
+          </div>
+
+          <div class="field">
+            <label for="espacioSelect" class="field-label">Espacio asignado <span class="req-mark">*</span></label>
+            <select id="espacioSelect" name="espacio_id" class="select" required>
+              <option value="">Cargando espacios disponibles...</option>
+            </select>
+            <span id="espacioError" class="field-error"></span>
+          </div>
+
+          <div class="field">
+            <div class="field-header">
+              <label for="horaEntradaInput" class="field-label">Hora de entrada <span class="req-mark">*</span></label>
+              <button type="button" id="setNowBtn" class="inline-link-btn">Usar hora actual</button>
+            </div>
+            <input
+              type="datetime-local"
+              id="horaEntradaInput"
+              name="hora_entrada"
+              class="input"
+              required
+            />
+            <span id="horaEntradaError" class="field-error"></span>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" id="submitEntryBtn" class="btn btn-primary">Registrar Entrada</button>
+            <button type="button" id="resetFormBtn" class="btn btn-secondary">Limpiar</button>
+          </div>
+        </form>
+
+        <!-- Formulario de Salida -->
+        <form id="exitForm" class="form-grid" style="display: none;" novalidate>
+          <div class="field">
+            <label for="exitRecordSelect" class="field-label">Vehículo estacionado <span class="req-mark">*</span></label>
+            <select id="exitRecordSelect" name="registro_id" class="select" required>
+              <option value="">Cargando vehículos activos...</option>
+            </select>
+            <span id="exitRecordError" class="field-error"></span>
+          </div>
+
+          <div id="exitPreviewBox" class="exit-preview-box" style="display: none;">
+            <div class="exit-preview-row">
+              <span>Espacio a liberar</span>
+              <strong id="exitPreviewSpace">—</strong>
+            </div>
+            <div class="exit-preview-row">
+              <span>Hora de entrada</span>
+              <strong id="exitPreviewEntry">—</strong>
+            </div>
+            <div class="exit-preview-row">
+              <span>Estancia calculada</span>
+              <strong id="exitPreviewDuration">—</strong>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="field-header">
+              <label for="horaSalidaInput" class="field-label">Hora de salida <span class="req-mark">*</span></label>
+              <button type="button" id="setExitNowBtn" class="inline-link-btn">Usar hora actual</button>
+            </div>
+            <input
+              type="datetime-local"
+              id="horaSalidaInput"
+              name="hora_salida"
+              class="input"
+              required
+            />
+            <span id="horaSalidaError" class="field-error"></span>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" id="submitExitBtn" class="btn btn-primary">Registrar Salida</button>
+            <button type="button" id="resetExitFormBtn" class="btn btn-secondary">Limpiar</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Grilla de Espacios Disponibles y Ocupados -->
+      <section id="espacios" class="panel" aria-labelledby="spacesHeading">
+        <div class="panel-header">
+          <div>
+            <h2 id="spacesHeading" class="panel-title">Disponibilidad de Espacios</h2>
+            <p class="panel-subtitle">Haz clic en un espacio disponible para entrada o en uno ocupado para salida.</p>
+          </div>
+          <div class="spaces-legend">
+            <span class="legend-item"><span class="legend-swatch available"></span> Disponible</span>
+            <span class="legend-item"><span class="legend-swatch occupied"></span> Ocupado</span>
+          </div>
+        </div>
+
+        <div id="spacesGrid" class="spaces-grid" aria-live="polite">
+          <!-- Renderizado dinámico -->
+        </div>
+      </section>
+    </div>
+
+    <!-- Fila 2: Tabla CRUD de Vehículos Registrados -->
+    <section id="vehiculos" class="panel" aria-labelledby="recordsHeading">
+      <div class="table-toolbar">
+        <div>
+          <h2 id="recordsHeading" class="panel-title">Vehículos Registrados</h2>
+          <p class="panel-subtitle">Consulta, edita, registra salidas o elimina registros persistentes.</p>
+        </div>
+
+        <div class="table-controls">
+          <input
+            type="search"
+            id="searchInput"
+            class="search-input"
+            placeholder="Buscar por placa, marca o espacio..."
+            aria-label="Buscar vehículos registrados"
+          />
+
+          <div class="segmented-filter" role="tablist" aria-label="Filtrar por estado">
+            <button type="button" class="filter-tab active" data-filter="Todos" role="tab" aria-selected="true">Todos</button>
+            <button type="button" class="filter-tab" data-filter="Activo" role="tab" aria-selected="false">Activos</button>
+            <button type="button" class="filter-tab" data-filter="Finalizado" role="tab" aria-selected="false">Finalizados</button>
+          </div>
+
+          <button type="button" id="refreshBtn" class="btn btn-secondary btn-sm">Actualizar</button>
+        </div>
+      </div>
+
+      <div id="tableFeedback" class="alert-banner" role="alert">
+        <span id="tableFeedbackText"></span>
+        <button type="button" id="tableFeedbackClose" class="alert-close" aria-label="Cerrar">&times;</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Placa</th>
+              <th>Marca / Modelo</th>
+              <th>Espacio</th>
+              <th>Hora de Entrada</th>
+              <th>Hora de Salida</th>
+              <th>Estancia</th>
+              <th>Estado</th>
+              <th class="text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="recordsTbody">
+            <!-- Renderizado dinámico -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <span>Sistema de Gestión de Estacionamiento</span>
+      <span>Persistencia relacional con Supabase PostgreSQL</span>
+    </div>
+  </footer>
+
+  <!-- Modal: Editar Registro -->
+  <div id="editModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="editModalTitle" class="modal-title">Editar Registro de Vehículo</h3>
+        <button type="button" class="modal-close" data-close-modal="editModal" aria-label="Cerrar">&times;</button>
+      </div>
+
+      <form id="editForm" class="form-grid" novalidate>
+        <input type="hidden" id="editRecordId" />
+
+        <div class="field">
+          <label for="editPlacaInput" class="field-label">Placa / Matrícula <span class="req-mark">*</span></label>
+          <input type="text" id="editPlacaInput" class="input input-mono" maxlength="12" required />
+          <span id="editPlacaError" class="field-error"></span>
+        </div>
+
+        <div class="field">
+          <label for="editMarcaInput" class="field-label">Marca / Modelo <span class="req-mark">*</span></label>
+          <input type="text" id="editMarcaInput" class="input" maxlength="60" required />
+          <span id="editMarcaError" class="field-error"></span>
+        </div>
+
+        <div class="field">
+          <label for="editEspacioSelect" class="field-label">Espacio asignado <span class="req-mark">*</span></label>
+          <select id="editEspacioSelect" class="select" required></select>
+          <span id="editEspacioError" class="field-error"></span>
+        </div>
+
+        <div class="field">
+          <label for="editHoraEntradaInput" class="field-label">Hora de entrada <span class="req-mark">*</span></label>
+          <input type="datetime-local" id="editHoraEntradaInput" class="input" required />
+          <span id="editHoraEntradaError" class="field-error"></span>
+        </div>
+
+        <div class="field">
+          <label for="editEstadoSelect" class="field-label">Estado</label>
+          <select id="editEstadoSelect" class="select">
+            <option value="Activo">Activo (Vehículo estacionado)</option>
+            <option value="Finalizado">Finalizado (Salida registrada)</option>
+          </select>
+        </div>
+
+        <div class="field" id="editHoraSalidaGroup">
+          <label for="editHoraSalidaInput" class="field-label">Hora de salida</label>
+          <input type="datetime-local" id="editHoraSalidaInput" class="input" />
+          <span id="editHoraSalidaError" class="field-error"></span>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="editModal">Cancelar</button>
+          <button type="submit" id="saveEditBtn" class="btn btn-primary">Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Confirmar Eliminación -->
+  <div id="deleteModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3 id="deleteModalTitle" class="modal-title">Confirmar Eliminación</h3>
+        <button type="button" class="modal-close" data-close-modal="deleteModal" aria-label="Cerrar">&times;</button>
+      </div>
+
+      <p style="color: var(--text-secondary);">
+        ¿Estás seguro de que deseas eliminar permanentemente este registro? Esta acción no se puede deshacer.
+      </p>
+
+      <div id="deleteDetailsBox" class="confirm-box-details"></div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal="deleteModal">Cancelar</button>
+        <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Eliminar Registro</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Configuración de Supabase y Script SQL -->
+  <div id="configModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="configModalTitle">
+    <div class="modal-dialog wide">
+      <div class="modal-header">
+        <h3 id="configModalTitle" class="modal-title">Conexión a Supabase (PostgreSQL)</h3>
+        <button type="button" class="modal-close" data-close-modal="configModal" aria-label="Cerrar">&times;</button>
+      </div>
+
+      <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 16px;">
+        Ingresa tu <strong>SUPABASE_URL</strong> y <strong>SUPABASE_ANON_KEY</strong> (clave pública <code>anon</code>, nunca <code>service_role</code>) para conectar en vivo, o edita directamente las constantes en el código fuente de <code>index.html</code>.
+      </p>
+
+      <form id="configForm" class="form-grid">
+        <div class="field">
+          <label for="cfgUrlInput" class="field-label">SUPABASE_URL</label>
+          <input type="url" id="cfgUrlInput" class="input" placeholder="https://tu-proyecto.supabase.co" />
+        </div>
+
+        <div class="field">
+          <label for="cfgKeyInput" class="field-label">SUPABASE_ANON_KEY (Pública)</label>
+          <input type="text" id="cfgKeyInput" class="input" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." />
+        </div>
+
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button type="submit" class="btn btn-primary btn-sm">Conectar con Supabase</button>
+          <button type="button" id="clearConfigBtn" class="btn btn-secondary btn-sm">Usar Modo Local</button>
+        </div>
+      </form>
+
+      <div style="margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border);">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+          <h4 style="font-size: 0.95rem;">Script SQL requerido en Supabase</h4>
+          <button type="button" id="copySqlBtn" class="btn btn-secondary btn-sm">Copiar SQL</button>
+        </div>
+        <pre id="sqlPreview" class="sql-block"></pre>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal="configModal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Región de notificaciones Toast -->
+  <div id="toastRegion" class="toast-region" aria-live="polite"></div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // =========================================================================
+      // CONFIGURACIÓN DE SUPABASE (Credenciales Públicas)
+      // Coloca aquí las credenciales de tu proyecto en Supabase:
+      // Panel de Supabase -> Project Settings -> API -> Project URL y anon/public key.
+      // IMPORTANTE: Usa ÚNICAMENTE la clave pública (anon). NUNCA uses service_role.
+      // =========================================================================
+      const SUPABASE_URL = 'https://TU-PROYECTO.supabase.co';
+      const SUPABASE_ANON_KEY = 'TU_SUPABASE_ANON_KEY';
+
+      // Claves para almacenamiento local (usado como respaldo automático si aún
+      // no has colocado credenciales reales de Supabase, o para guardar config UI).
+      const LS_CFG_KEY = 'estacionamiento_supabase_cfg_v1';
+      const LS_DATA_KEY = 'estacionamiento_local_db_v2';
+
+      const SQL_SCRIPT = `-- Script SQL para Supabase (PostgreSQL) - Sistema de Gestión de Estacionamiento
+-- Ejecuta este script completo en el SQL Editor de tu proyecto Supabase.
+
+-- 1. Tabla de Espacios de Estacionamiento
+CREATE TABLE IF NOT EXISTS public.espacios (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  codigo TEXT NOT NULL UNIQUE,
+  zona TEXT NOT NULL,
+  tipo TEXT NOT NULL DEFAULT 'Auto',
+  estado TEXT NOT NULL DEFAULT 'Disponible' CHECK (estado IN ('Disponible', 'Ocupado')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 2. Tabla de Registros de Estacionamiento (datos de texto guardados directamente)
+CREATE TABLE IF NOT EXISTS public.registros_estacionamiento (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  placa TEXT NOT NULL,
+  marca_modelo TEXT NOT NULL,
+  espacio_id UUID NOT NULL REFERENCES public.espacios(id) ON DELETE RESTRICT,
+  hora_entrada TIMESTAMPTZ NOT NULL DEFAULT now(),
+  hora_salida TIMESTAMPTZ NULL,
+  estado TEXT NOT NULL DEFAULT 'Activo' CHECK (estado IN ('Activo', 'Finalizado')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Migración segura si la tabla ya existía sin las columnas placa / marca_modelo
+ALTER TABLE public.registros_estacionamiento ADD COLUMN IF NOT EXISTS placa TEXT;
+ALTER TABLE public.registros_estacionamiento ADD COLUMN IF NOT EXISTS marca_modelo TEXT;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'registros_estacionamiento' AND column_name = 'vehiculo_id'
+  ) THEN
+    ALTER TABLE public.registros_estacionamiento ALTER COLUMN vehiculo_id DROP NOT NULL;
+  END IF;
+END $$;
+
+-- 3. Habilitar Row Level Security (RLS) y políticas para acceso con clave anon
+ALTER TABLE public.espacios ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.registros_estacionamiento ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Acceso anonimo espacios" ON public.espacios;
+CREATE POLICY "Acceso anonimo espacios"
+  ON public.espacios FOR ALL TO public USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Acceso anonimo registros" ON public.registros_estacionamiento;
+CREATE POLICY "Acceso anonimo registros"
+  ON public.registros_estacionamiento FOR ALL TO public USING (true) WITH CHECK (true);
+
+-- 4. Datos iniciales de espacios (12 bahías listas para operar)
+INSERT INTO public.espacios (codigo, zona, tipo, estado) VALUES
+  ('A-01', 'Zona Norte', 'Auto', 'Disponible'),
+  ('A-02', 'Zona Norte', 'Auto', 'Disponible'),
+  ('A-03', 'Zona Norte', 'Auto', 'Disponible'),
+  ('A-04', 'Zona Norte', 'SUV / Camioneta', 'Disponible'),
+  ('A-05', 'Zona Norte', 'Auto', 'Disponible'),
+  ('A-06', 'Zona Norte', 'Preferencial', 'Disponible'),
+  ('B-01', 'Zona Sur', 'Auto', 'Disponible'),
+  ('B-02', 'Zona Sur', 'Auto', 'Disponible'),
+  ('B-03', 'Zona Sur', 'Auto', 'Disponible'),
+  ('B-04', 'Zona Sur', 'SUV / Camioneta', 'Disponible'),
+  ('B-05', 'Zona Sur', 'Motocicleta', 'Disponible'),
+  ('B-06', 'Zona Sur', 'Motocicleta', 'Disponible')
+ON CONFLICT (codigo) DO NOTHING;
+
+-- 5. Recargar caché de esquema de PostgREST en Supabase
+NOTIFY pgrst, 'reload schema';`;
+
+      // Estado global en memoria
+      const state = {
+        mode: 'local', // 'supabase' | 'local'
+        supabase: null,
+        espacios: [],
+        registros: [],
+        filterEstado: 'Todos',
+        searchQuery: '',
+        selectedSpaceId: '',
+        pendingDeleteId: null,
+        formMode: 'entry', // 'entry' | 'exit'
+        loading: true
+      };
+
+      // Referencias DOM
+      const dom = {
+        dbStatusBadge: document.getElementById('dbStatusBadge'),
+        openConfigBtn: document.getElementById('openConfigBtn'),
+        headerCtaBtn: document.getElementById('headerCtaBtn'),
+        mobileMenuBtn: document.getElementById('mobileMenuBtn'),
+        mobileNavDrawer: document.getElementById('mobileNavDrawer'),
+
+        kpiTotalSpaces: document.getElementById('kpiTotalSpaces'),
+        kpiAvailableSpaces: document.getElementById('kpiAvailableSpaces'),
+        kpiAvailableSub: document.getElementById('kpiAvailableSub'),
+        kpiOccupiedSpaces: document.getElementById('kpiOccupiedSpaces'),
+        kpiOccupancyRate: document.getElementById('kpiOccupancyRate'),
+        kpiTotalRecords: document.getElementById('kpiTotalRecords'),
+        kpiFinishedSub: document.getElementById('kpiFinishedSub'),
+
+        modeEntryBtn: document.getElementById('modeEntryBtn'),
+        modeExitBtn: document.getElementById('modeExitBtn'),
+        entryForm: document.getElementById('entryForm'),
+        placaInput: document.getElementById('placaInput'),
+        marcaInput: document.getElementById('marcaInput'),
+        espacioSelect: document.getElementById('espacioSelect'),
+        horaEntradaInput: document.getElementById('horaEntradaInput'),
+        setNowBtn: document.getElementById('setNowBtn'),
+        submitEntryBtn: document.getElementById('submitEntryBtn'),
+        resetFormBtn: document.getElementById('resetFormBtn'),
+        placaError: document.getElementById('placaError'),
+        marcaError: document.getElementById('marcaError'),
+        espacioError: document.getElementById('espacioError'),
+        horaEntradaError: document.getElementById('horaEntradaError'),
+
+        exitForm: document.getElementById('exitForm'),
+        exitRecordSelect: document.getElementById('exitRecordSelect'),
+        exitRecordError: document.getElementById('exitRecordError'),
+        exitPreviewBox: document.getElementById('exitPreviewBox'),
+        exitPreviewSpace: document.getElementById('exitPreviewSpace'),
+        exitPreviewEntry: document.getElementById('exitPreviewEntry'),
+        exitPreviewDuration: document.getElementById('exitPreviewDuration'),
+        horaSalidaInput: document.getElementById('horaSalidaInput'),
+        setExitNowBtn: document.getElementById('setExitNowBtn'),
+        horaSalidaError: document.getElementById('horaSalidaError'),
+        submitExitBtn: document.getElementById('submitExitBtn'),
+        resetExitFormBtn: document.getElementById('resetExitFormBtn'),
+
+        formAlert: document.getElementById('formAlert'),
+        formAlertText: document.getElementById('formAlertText'),
+        formAlertClose: document.getElementById('formAlertClose'),
+
+        spacesGrid: document.getElementById('spacesGrid'),
+
+        searchInput: document.getElementById('searchInput'),
+        filterTabs: document.querySelectorAll('.filter-tab'),
+        refreshBtn: document.getElementById('refreshBtn'),
+        recordsTbody: document.getElementById('recordsTbody'),
+        tableFeedback: document.getElementById('tableFeedback'),
+        tableFeedbackText: document.getElementById('tableFeedbackText'),
+        tableFeedbackClose: document.getElementById('tableFeedbackClose'),
+
+        editModal: document.getElementById('editModal'),
+        editForm: document.getElementById('editForm'),
+        editRecordId: document.getElementById('editRecordId'),
+        editPlacaInput: document.getElementById('editPlacaInput'),
+        editMarcaInput: document.getElementById('editMarcaInput'),
+        editEspacioSelect: document.getElementById('editEspacioSelect'),
+        editHoraEntradaInput: document.getElementById('editHoraEntradaInput'),
+        editEstadoSelect: document.getElementById('editEstadoSelect'),
+        editHoraSalidaGroup: document.getElementById('editHoraSalidaGroup'),
+        editHoraSalidaInput: document.getElementById('editHoraSalidaInput'),
+        editPlacaError: document.getElementById('editPlacaError'),
+        editMarcaError: document.getElementById('editMarcaError'),
+        editEspacioError: document.getElementById('editEspacioError'),
+        editHoraEntradaError: document.getElementById('editHoraEntradaError'),
+        editHoraSalidaError: document.getElementById('editHoraSalidaError'),
+        saveEditBtn: document.getElementById('saveEditBtn'),
+
+        deleteModal: document.getElementById('deleteModal'),
+        deleteDetailsBox: document.getElementById('deleteDetailsBox'),
+        confirmDeleteBtn: document.getElementById('confirmDeleteBtn'),
+
+        configModal: document.getElementById('configModal'),
+        configForm: document.getElementById('configForm'),
+        cfgUrlInput: document.getElementById('cfgUrlInput'),
+        cfgKeyInput: document.getElementById('cfgKeyInput'),
+        clearConfigBtn: document.getElementById('clearConfigBtn'),
+        copySqlBtn: document.getElementById('copySqlBtn'),
+        sqlPreview: document.getElementById('sqlPreview'),
+
+        toastRegion: document.getElementById('toastRegion')
+      };
+
+      // =========================================================================
+      // UTILIDADES DE FORMATO Y SEGURIDAD
+      // =========================================================================
+      function escapeHtml(value) {
+        return String(value ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function normalizePlate(plate) {
+        return String(plate || '').trim().toUpperCase().replace(/\s+/g, '-');
+      }
+
+      function sameId(a, b) {
+        return a !== null && a !== undefined && b !== null && b !== undefined && String(a) === String(b);
+      }
+
+      function toLocalDateTimeInputValue(isoString) {
+        const d = isoString ? new Date(isoString) : new Date();
+        if (Number.isNaN(d.getTime())) return '';
+        const pad = (n) => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      }
+
+      function formatDisplayDateTime(isoString) {
+        if (!isoString) return 'En curso';
+        const d = new Date(isoString);
+        if (Number.isNaN(d.getTime())) return '—';
+        return new Intl.DateTimeFormat('es-ES', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        }).format(d);
+      }
+
+      function formatDuration(startIso, endIso) {
+        const start = new Date(startIso).getTime();
+        const end = endIso ? new Date(endIso).getTime() : Date.now();
+        if (Number.isNaN(start) || Number.isNaN(end) || end < start) return '0m';
+        const totalMinutes = Math.floor((end - start) / 60000);
+        const hours = Math.floor(totalMinutes / 60);
+        const mins = totalMinutes % 60;
+        if (hours === 0) return `${mins}m`;
+        return `${hours}h ${String(mins).padStart(2, '0')}m`;
+      }
+
+      function generateUuid() {
+        if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+          return window.crypto.randomUUID();
+        }
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+          const r = (Math.random() * 16) | 0;
+          const v = c === 'x' ? r : (r & 0x3) | 0x8;
+          return v.toString(16);
+        });
+      }
+
+      function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = `<span>${escapeHtml(message)}</span>`;
+        dom.toastRegion.appendChild(toast);
+        setTimeout(() => {
+          toast.remove();
+        }, 3600);
+      }
+
+      function showFormAlert(message, type) {
+        dom.formAlert.className = `alert-banner visible ${type}`;
+        dom.formAlertText.textContent = message;
+      }
+
+      function hideFormAlert() {
+        dom.formAlert.className = 'alert-banner';
+        dom.formAlertText.textContent = '';
+      }
+
+      function showTableFeedback(message, type = 'error') {
+        dom.tableFeedback.className = `alert-banner visible ${type}`;
+        dom.tableFeedbackText.textContent = message;
+      }
+
+      function hideTableFeedback() {
+        dom.tableFeedback.className = 'alert-banner';
+        dom.tableFeedbackText.textContent = '';
+      }
+
+      function setFieldError(inputEl, errorEl, message) {
+        if (message) {
+          inputEl.classList.add('is-invalid');
+          errorEl.textContent = message;
+          errorEl.classList.add('visible');
+        } else {
+          inputEl.classList.remove('is-invalid');
+          errorEl.textContent = '';
+          errorEl.classList.remove('visible');
+        }
+      }
+
+      // =========================================================================
+      // INICIALIZACIÓN DE CONEXIÓN SUPABASE O RESPALDO PERSISTENTE LOCAL
+      // =========================================================================
+      function getActiveCredentials() {
+        try {
+          const saved = JSON.parse(localStorage.getItem(LS_CFG_KEY) || 'null');
+          if (saved && saved.url && saved.key) {
+            return { url: saved.url.trim(), key: saved.key.trim(), fromUi: true };
+          }
+        } catch (_) {
+          // Ignorar error de lectura
+        }
+        return { url: SUPABASE_URL.trim(), key: SUPABASE_ANON_KEY.trim(), fromUi: false };
+      }
+
+      function isConfiguredCredential(url, key) {
+        return (
+          Boolean(url) &&
+          Boolean(key) &&
+          !url.includes('TU-PROYECTO') &&
+          !key.includes('TU_SUPABASE_ANON_KEY') &&
+          url.startsWith('http')
+        );
+      }
+
+      function initDatabaseClient() {
+        const creds = getActiveCredentials();
+        if (isConfiguredCredential(creds.url, creds.key) && window.supabase && typeof window.supabase.createClient === 'function') {
+          state.supabase = window.supabase.createClient(creds.url, creds.key);
+          state.mode = 'supabase';
+          dom.dbStatusBadge.innerHTML = 'Base de datos: <strong>Supabase PostgreSQL</strong>';
+        } else {
+          state.supabase = null;
+          state.mode = 'local';
+          dom.dbStatusBadge.innerHTML = 'Almacenamiento: <strong>Local Persistente (Demo)</strong>';
+          seedLocalDbIfNeeded();
+        }
+      }
+
+      // =========================================================================
+      // CAPA DE DATOS: MODO LOCAL PERSISTENTE (localStorage)
+      // Replica exactamente las tablas: espacios y registros_estacionamiento
+      // =========================================================================
+      function seedLocalDbIfNeeded() {
+        const existing = localStorage.getItem(LS_DATA_KEY);
+        if (existing) return;
+
+        const now = Date.now();
+        const espacios = [
+          { id: 'sp-a01', codigo: 'A-01', zona: 'Zona Norte', tipo: 'Auto', estado: 'Ocupado' },
+          { id: 'sp-a02', codigo: 'A-02', zona: 'Zona Norte', tipo: 'Auto', estado: 'Disponible' },
+          { id: 'sp-a03', codigo: 'A-03', zona: 'Zona Norte', tipo: 'Auto', estado: 'Ocupado' },
+          { id: 'sp-a04', codigo: 'A-04', zona: 'Zona Norte', tipo: 'SUV / Camioneta', estado: 'Disponible' },
+          { id: 'sp-a05', codigo: 'A-05', zona: 'Zona Norte', tipo: 'Auto', estado: 'Disponible' },
+          { id: 'sp-a06', codigo: 'A-06', zona: 'Zona Norte', tipo: 'Preferencial', estado: 'Disponible' },
+          { id: 'sp-b01', codigo: 'B-01', zona: 'Zona Sur', tipo: 'Auto', estado: 'Disponible' },
+          { id: 'sp-b02', codigo: 'B-02', zona: 'Zona Sur', tipo: 'Auto', estado: 'Ocupado' },
+          { id: 'sp-b03', codigo: 'B-03', zona: 'Zona Sur', tipo: 'Auto', estado: 'Disponible' },
+          { id: 'sp-b04', codigo: 'B-04', zona: 'Zona Sur', tipo: 'SUV / Camioneta', estado: 'Disponible' },
+          { id: 'sp-b05', codigo: 'B-05', zona: 'Zona Sur', tipo: 'Motocicleta', estado: 'Disponible' },
+          { id: 'sp-b06', codigo: 'B-06', zona: 'Zona Sur', tipo: 'Motocicleta', estado: 'Disponible' }
+        ];
+
+        const registros = [
+          {
+            id: 'reg-1',
+            placa: 'PBC-4821',
+            marca_modelo: 'Toyota Corolla Cross',
+            espacio_id: 'sp-a01',
+            hora_entrada: new Date(now - 95 * 60000).toISOString(),
+            hora_salida: null,
+            estado: 'Activo'
+          },
+          {
+            id: 'reg-2',
+            placa: 'GTR-9104',
+            marca_modelo: 'Mazda CX-5',
+            espacio_id: 'sp-a03',
+            hora_entrada: new Date(now - 42 * 60000).toISOString(),
+            hora_salida: null,
+            estado: 'Activo'
+          },
+          {
+            id: 'reg-3',
+            placa: 'KLM-3057',
+            marca_modelo: 'Hyundai Tucson',
+            espacio_id: 'sp-b02',
+            hora_entrada: new Date(now - 18 * 60000).toISOString(),
+            hora_salida: null,
+            estado: 'Activo'
+          },
+          {
+            id: 'reg-4',
+            placa: 'JKL-7720',
+            marca_modelo: 'Kia Rio',
+            espacio_id: 'sp-a02',
+            hora_entrada: new Date(now - 240 * 60000).toISOString(),
+            hora_salida: new Date(now - 115 * 60000).toISOString(),
+            estado: 'Finalizado'
+          }
+        ];
+
+        localStorage.setItem(LS_DATA_KEY, JSON.stringify({ espacios, registros }));
+      }
+
+      function readLocalDb() {
+        seedLocalDbIfNeeded();
+        return JSON.parse(localStorage.getItem(LS_DATA_KEY));
+      }
+
+      function writeLocalDb(db) {
+        localStorage.setItem(LS_DATA_KEY, JSON.stringify(db));
+      }
+
+      // =========================================================================
+      // OPERACIONES CRUD UNIFICADAS (SUPABASE / LOCAL)
+      // =========================================================================
+      async function fetchAllData() {
+        state.loading = true;
+        renderTableSkeleton();
+
+        try {
+          if (state.mode === 'supabase') {
+            const [espRes, regRes] = await Promise.all([
+              state.supabase
+                .from('espacios')
+                .select('id, codigo, zona, tipo, estado')
+                .order('codigo', { ascending: true }),
+              state.supabase
+                .from('registros_estacionamiento')
+                .select('*')
+                .order('hora_entrada', { ascending: false })
+            ]);
+
+            if (espRes.error) throw espRes.error;
+            state.espacios = espRes.data || [];
+
+            if (regRes.error) throw regRes.error;
+
+            const rows = regRes.data || [];
+            const missingPlacaCol = rows.length > 0 && !Object.prototype.hasOwnProperty.call(rows[0], 'placa');
+
+            state.registros = rows.map((r) => ({
+              id: r.id,
+              placa: r.placa || 'Sin placa',
+              marca_modelo: r.marca_modelo || 'Sin especificar',
+              espacio_id: r.espacio_id,
+              hora_entrada: r.hora_entrada,
+              hora_salida: r.hora_salida,
+              estado: r.estado,
+              espacio: state.espacios.find((s) => sameId(s.id, r.espacio_id)) || { codigo: '—', zona: '', tipo: '' }
+            }));
+
+            if (missingPlacaCol) {
+              showTableFeedback(
+                'Tu tabla registros_estacionamiento en Supabase aún no tiene las columnas "placa" y "marca_modelo". Abre "Configurar Supabase" y ejecuta el Script SQL actualizado.',
+                'error'
+              );
+            } else {
+              hideTableFeedback();
+            }
+          } else {
+            const db = readLocalDb();
+            state.espacios = [...db.espacios].sort((a, b) => a.codigo.localeCompare(b.codigo));
+            state.registros = [...db.registros]
+              .sort((a, b) => new Date(b.hora_entrada) - new Date(a.hora_entrada))
+              .map((r) => ({
+                ...r,
+                espacio: db.espacios.find((s) => sameId(s.id, r.espacio_id)) || { codigo: '—', zona: '', tipo: '' }
+              }));
+            hideTableFeedback();
+          }
+        } catch (err) {
+          console.error('Error al cargar datos:', err);
+          showTableFeedback(
+            `Error de conexión con la base de datos: ${err.message || 'Verifica las tablas y políticas RLS en Supabase.'}`,
+            'error'
+          );
+          if (!Array.isArray(state.espacios)) state.espacios = [];
+          state.registros = [];
+        } finally {
+          state.loading = false;
+          renderAll();
+        }
+      }
+
+      async function createVehicleEntry({ placa, marca_modelo, espacio_id, hora_entrada }) {
+        const cleanPlaca = normalizePlate(placa);
+        const cleanMarca = marca_modelo.trim();
+        const isoEntrada = new Date(hora_entrada).toISOString();
+
+        // Validar que el vehículo no tenga ya un registro Activo
+        const activeSamePlate = state.registros.find(
+          (r) => r.estado === 'Activo' && normalizePlate(r.placa) === cleanPlaca
+        );
+        if (activeSamePlate) {
+          throw new Error(`El vehículo con placa ${cleanPlaca} ya se encuentra estacionado en ${activeSamePlate.espacio.codigo}.`);
+        }
+
+        if (state.mode === 'supabase') {
+          // 1. Verificar disponibilidad real del espacio
+          const { data: spaceCheck, error: spaceErr } = await state.supabase
+            .from('espacios')
+            .select('id, estado, codigo')
+            .eq('id', espacio_id)
+            .single();
+
+          if (spaceErr) throw spaceErr;
+          if (!spaceCheck || spaceCheck.estado !== 'Disponible') {
+            throw new Error('El espacio seleccionado ya fue ocupado. Selecciona otro.');
+          }
+
+          // 2. Guardar directamente todos los datos en registros_estacionamiento
+          const { error: regErr } = await state.supabase
+            .from('registros_estacionamiento')
+            .insert({
+              placa: cleanPlaca,
+              marca_modelo: cleanMarca,
+              espacio_id: spaceCheck.id,
+              hora_entrada: isoEntrada,
+              estado: 'Activo'
+            });
+
+          if (regErr) {
+            if (regErr.code === '22P02') {
+              throw new Error(`Incompatibilidad de tipos en Supabase: espacios.id es numérico ("${spaceCheck.id}") pero registros_estacionamiento.espacio_id es de tipo uuid. Cambia el tipo de espacio_id a int8 (bigint) en Supabase.`);
+            }
+            if (
+              regErr.code === '42703' ||
+              regErr.code === '23502' ||
+              regErr.code === 'PGRST204' ||
+              (regErr.message && regErr.message.includes('schema cache'))
+            ) {
+              throw new Error('Supabase no reconoce la columna "placa" o "marca_modelo" en registros_estacionamiento. Abre "Configurar Supabase", copia el Script SQL actualizado y ejecútalo en el SQL Editor (incluye NOTIFY pgrst, \'reload schema\').');
+            }
+            throw regErr;
+          }
+
+          // 3. Actualizar estado del espacio a Ocupado
+          const { error: updSpaceErr } = await state.supabase
+            .from('espacios')
+            .update({ estado: 'Ocupado' })
+            .eq('id', spaceCheck.id);
+
+          if (updSpaceErr) throw updSpaceErr;
+        } else {
+          const db = readLocalDb();
+          const space = db.espacios.find((s) => sameId(s.id, espacio_id));
+          if (!space || space.estado !== 'Disponible') {
+            throw new Error('El espacio seleccionado ya no está disponible.');
+          }
+
+          db.registros.push({
+            id: generateUuid(),
+            placa: cleanPlaca,
+            marca_modelo: cleanMarca,
+            espacio_id: space.id,
+            hora_entrada: isoEntrada,
+            hora_salida: null,
+            estado: 'Activo'
+          });
+
+          space.estado = 'Ocupado';
+          writeLocalDb(db);
+        }
+      }
+
+      async function registerVehicleExit(recordId, customSalidaTime) {
+        const record = state.registros.find((r) => sameId(r.id, recordId));
+        if (!record) throw new Error('Registro no encontrado.');
+        if (record.estado === 'Finalizado') return;
+
+        const exitDate = customSalidaTime ? new Date(customSalidaTime) : new Date();
+        if (Number.isNaN(exitDate.getTime())) {
+          throw new Error('La hora de salida ingresada no es válida.');
+        }
+        if (exitDate.getTime() < new Date(record.hora_entrada).getTime()) {
+          throw new Error('La hora de salida no puede ser anterior a la hora de entrada.');
+        }
+        const exitIso = exitDate.toISOString();
+
+        if (state.mode === 'supabase') {
+          const { error: regErr } = await state.supabase
+            .from('registros_estacionamiento')
+            .update({ hora_salida: exitIso, estado: 'Finalizado' })
+            .eq('id', record.id);
+
+          if (regErr) throw regErr;
+
+          const { error: spaceErr } = await state.supabase
+            .from('espacios')
+            .update({ estado: 'Disponible' })
+            .eq('id', record.espacio_id);
+
+          if (spaceErr) throw spaceErr;
+        } else {
+          const db = readLocalDb();
+          const r = db.registros.find((item) => sameId(item.id, record.id));
+          if (r) {
+            r.hora_salida = exitIso;
+            r.estado = 'Finalizado';
+            const sp = db.espacios.find((s) => sameId(s.id, r.espacio_id));
+            if (sp) sp.estado = 'Disponible';
+            writeLocalDb(db);
+          }
+        }
+      }
+
+      async function updateVehicleRecord(recordId, { placa, marca_modelo, espacio_id, hora_entrada, estado, hora_salida }) {
+        const existing = state.registros.find((r) => sameId(r.id, recordId));
+        if (!existing) throw new Error('Registro no encontrado.');
+
+        const targetSpace = state.espacios.find((s) => sameId(s.id, espacio_id));
+        const resolvedSpaceId = targetSpace ? targetSpace.id : espacio_id;
+
+        const cleanPlaca = normalizePlate(placa);
+        const cleanMarca = marca_modelo.trim();
+        const isoEntrada = new Date(hora_entrada).toISOString();
+        const isoSalida = estado === 'Finalizado'
+          ? (hora_salida ? new Date(hora_salida).toISOString() : new Date().toISOString())
+          : null;
+
+        // Evitar duplicar placa activa en otro registro
+        if (estado === 'Activo') {
+          const conflict = state.registros.find(
+            (r) => !sameId(r.id, recordId) && r.estado === 'Activo' && normalizePlate(r.placa) === cleanPlaca
+          );
+          if (conflict) {
+            throw new Error(`La placa ${cleanPlaca} ya tiene otro ingreso activo.`);
+          }
+        }
+
+        if (state.mode === 'supabase') {
+          const { error: regUpdErr } = await state.supabase
+            .from('registros_estacionamiento')
+            .update({
+              placa: cleanPlaca,
+              marca_modelo: cleanMarca,
+              espacio_id: resolvedSpaceId,
+              hora_entrada: isoEntrada,
+              hora_salida: isoSalida,
+              estado
+            })
+            .eq('id', existing.id);
+
+          if (regUpdErr) {
+            if (regUpdErr.code === '22P02') {
+              throw new Error(`Incompatibilidad de tipos en Supabase: espacios.id es numérico ("${resolvedSpaceId}") pero registros_estacionamiento.espacio_id es de tipo uuid. Cambia el tipo de espacio_id a int8 (bigint) en Supabase.`);
+            }
+            if (
+              regUpdErr.code === '42703' ||
+              regUpdErr.code === '23502' ||
+              regUpdErr.code === 'PGRST204' ||
+              (regUpdErr.message && regUpdErr.message.includes('schema cache'))
+            ) {
+              throw new Error('Supabase no reconoce la columna "placa" o "marca_modelo" en registros_estacionamiento. Abre "Configurar Supabase", copia el Script SQL actualizado y ejecútalo en el SQL Editor.');
+            }
+            throw regUpdErr;
+          }
+
+          // Liberar espacio anterior si era Activo
+          if (existing.estado === 'Activo' && (!sameId(existing.espacio_id, resolvedSpaceId) || estado === 'Finalizado')) {
+            const { error: freeErr } = await state.supabase
+              .from('espacios')
+              .update({ estado: 'Disponible' })
+              .eq('id', existing.espacio_id);
+            if (freeErr) throw freeErr;
+          }
+
+          // Ocupar espacio nuevo si queda Activo
+          if (estado === 'Activo' && (!sameId(existing.espacio_id, resolvedSpaceId) || existing.estado === 'Finalizado')) {
+            const { error: occErr } = await state.supabase
+              .from('espacios')
+              .update({ estado: 'Ocupado' })
+              .eq('id', resolvedSpaceId);
+            if (occErr) throw occErr;
+          }
+        } else {
+          const db = readLocalDb();
+          const rec = db.registros.find((r) => sameId(r.id, recordId));
+          if (!rec) throw new Error('Registro no encontrado.');
+
+          if (rec.estado === 'Activo') {
+            const prevSp = db.espacios.find((s) => sameId(s.id, rec.espacio_id));
+            if (prevSp) prevSp.estado = 'Disponible';
+          }
+
+          if (estado === 'Activo') {
+            const nextSp = db.espacios.find((s) => sameId(s.id, resolvedSpaceId));
+            if (!nextSp) throw new Error('Espacio inválido.');
+            if (nextSp.estado === 'Ocupado' && !sameId(rec.espacio_id, resolvedSpaceId)) {
+              throw new Error('El nuevo espacio seleccionado está ocupado.');
+            }
+            nextSp.estado = 'Ocupado';
+          }
+
+          rec.placa = cleanPlaca;
+          rec.marca_modelo = cleanMarca;
+          rec.espacio_id = resolvedSpaceId;
+          rec.hora_entrada = isoEntrada;
+          rec.hora_salida = isoSalida;
+          rec.estado = estado;
+
+          writeLocalDb(db);
+        }
+      }
+
+      async function deleteVehicleRecord(recordId) {
+        const record = state.registros.find((r) => sameId(r.id, recordId));
+        if (!record) return;
+
+        if (state.mode === 'supabase') {
+          const { error: delErr } = await state.supabase
+            .from('registros_estacionamiento')
+            .delete()
+            .eq('id', record.id);
+
+          if (delErr) throw delErr;
+
+          if (record.estado === 'Activo') {
+            const { error: freeErr } = await state.supabase
+              .from('espacios')
+              .update({ estado: 'Disponible' })
+              .eq('id', record.espacio_id);
+            if (freeErr) throw freeErr;
+          }
+        } else {
+          const db = readLocalDb();
+          db.registros = db.registros.filter((r) => !sameId(r.id, record.id));
+          if (record.estado === 'Activo') {
+            const sp = db.espacios.find((s) => sameId(s.id, record.espacio_id));
+            if (sp) sp.estado = 'Disponible';
+          }
+          writeLocalDb(db);
+        }
+      }
+
+      // =========================================================================
+      // RENDERIZADO DE UI
+      // =========================================================================
+      function renderAll() {
+        renderKpis();
+        renderSpaceOptions();
+        renderExitOptions();
+        renderSpacesGrid();
+        renderRecordsTable();
+      }
+
+      function renderKpis() {
+        const total = state.espacios.length;
+        const available = state.espacios.filter((s) => s.estado === 'Disponible').length;
+        const occupied = state.espacios.filter((s) => s.estado === 'Ocupado').length;
+        const rate = total > 0 ? Math.round((occupied / total) * 100) : 0;
+        const totalReg = state.registros.length;
+        const finishedReg = state.registros.filter((r) => r.estado === 'Finalizado').length;
+
+        dom.kpiTotalSpaces.textContent = total;
+        dom.kpiAvailableSpaces.textContent = available;
+        dom.kpiAvailableSub.textContent = available === 0 ? 'Sin bahías libres' : 'Listos para asignación';
+        dom.kpiOccupiedSpaces.textContent = occupied;
+        dom.kpiOccupancyRate.textContent = `${rate}% de ocupación`;
+        dom.kpiTotalRecords.textContent = totalReg;
+        dom.kpiFinishedSub.textContent = `${finishedReg} salidas finalizadas`;
+      }
+
+      function renderSpaceOptions() {
+        const availableSpaces = state.espacios.filter((s) => s.estado === 'Disponible');
+        if (availableSpaces.length === 0) {
+          dom.espacioSelect.innerHTML = '<option value="">No hay espacios disponibles actualmente</option>';
+          dom.espacioSelect.disabled = true;
+          return;
+        }
+
+        dom.espacioSelect.disabled = false;
+        const options = ['<option value="">Selecciona un espacio disponible...</option>'];
+        for (const s of availableSpaces) {
+          const selected = sameId(state.selectedSpaceId, s.id) ? 'selected' : '';
+          options.push(
+            `<option value="${escapeHtml(s.id)}" ${selected}>${escapeHtml(s.codigo)} — ${escapeHtml(s.zona)} (${escapeHtml(s.tipo)})</option>`
+          );
+        }
+        dom.espacioSelect.innerHTML = options.join('');
+      }
+
+      function renderExitOptions() {
+        const activeRecords = state.registros.filter((r) => r.estado === 'Activo');
+        const currentValue = dom.exitRecordSelect.value;
+
+        if (activeRecords.length === 0) {
+          dom.exitRecordSelect.innerHTML = '<option value="">No hay vehículos estacionados actualmente</option>';
+          dom.exitRecordSelect.disabled = true;
+          dom.submitExitBtn.disabled = true;
+          updateExitPreview();
+          return;
+        }
+
+        dom.exitRecordSelect.disabled = false;
+        dom.submitExitBtn.disabled = false;
+        const options = ['<option value="">Selecciona el vehículo que sale...</option>'];
+        for (const r of activeRecords) {
+          const selected = sameId(currentValue, r.id) ? 'selected' : '';
+          options.push(
+            `<option value="${escapeHtml(r.id)}" ${selected}>${escapeHtml(r.placa)} — ${escapeHtml(r.marca_modelo)} (Espacio ${escapeHtml(r.espacio.codigo)})</option>`
+          );
+        }
+        dom.exitRecordSelect.innerHTML = options.join('');
+        updateExitPreview();
+      }
+
+      function updateExitPreview() {
+        const recId = dom.exitRecordSelect.value;
+        const rec = state.registros.find((r) => sameId(r.id, recId) && r.estado === 'Activo');
+        if (!rec) {
+          dom.exitPreviewBox.style.display = 'none';
+          return;
+        }
+        const salidaVal = dom.horaSalidaInput.value;
+        const salidaIso = salidaVal ? new Date(salidaVal).toISOString() : new Date().toISOString();
+        dom.exitPreviewSpace.textContent = `${rec.espacio.codigo} (${rec.espacio.zona})`;
+        dom.exitPreviewEntry.textContent = formatDisplayDateTime(rec.hora_entrada);
+        dom.exitPreviewDuration.textContent = formatDuration(rec.hora_entrada, salidaIso);
+        dom.exitPreviewBox.style.display = 'flex';
+      }
+
+      function switchFormMode(mode) {
+        state.formMode = mode;
+        const isEntry = mode === 'entry';
+        dom.modeEntryBtn.classList.toggle('active', isEntry);
+        dom.modeEntryBtn.setAttribute('aria-selected', String(isEntry));
+        dom.modeExitBtn.classList.toggle('active', !isEntry);
+        dom.modeExitBtn.setAttribute('aria-selected', String(!isEntry));
+        dom.entryForm.style.display = isEntry ? 'flex' : 'none';
+        dom.exitForm.style.display = isEntry ? 'none' : 'flex';
+        hideFormAlert();
+        if (!isEntry) {
+          if (!dom.horaSalidaInput.value) {
+            dom.horaSalidaInput.value = toLocalDateTimeInputValue();
+          }
+          updateExitPreview();
+        }
+      }
+
+      function renderSpacesGrid() {
+        if (state.espacios.length === 0) {
+          dom.spacesGrid.innerHTML = `
+            <div class="state-box" style="grid-column: 1 / -1;">
+              <p class="state-title">Sin espacios cargados</p>
+              <p>Ejecuta el script SQL en Supabase o verifica la conexión.</p>
+            </div>
+          `;
+          return;
+        }
+
+        const html = state.espacios.map((space) => {
+          const isAvail = space.estado === 'Disponible';
+          const activeReg = !isAvail
+            ? state.registros.find((r) => r.estado === 'Activo' && sameId(r.espacio_id, space.id))
+            : null;
+          const selectedClass = isAvail && sameId(state.selectedSpaceId, space.id) ? 'selected' : '';
+
+          return `
+            <button
+              type="button"
+              class="space-tile ${isAvail ? 'available' : 'occupied'} ${selectedClass}"
+              data-space-id="${escapeHtml(space.id)}"
+              data-space-state="${escapeHtml(space.estado)}"
+              data-space-code="${escapeHtml(space.codigo)}"
+              aria-label="Espacio ${escapeHtml(space.codigo)}, ${escapeHtml(space.estado)}"
+            >
+              <div class="space-top">
+                <span class="space-code">${escapeHtml(space.codigo)}</span>
+                <span class="space-state">${escapeHtml(space.estado)}</span>
+              </div>
+              <div>
+                <div class="space-meta">${escapeHtml(space.zona)} · ${escapeHtml(space.tipo)}</div>
+                ${activeReg ? `<div class="space-plate">${escapeHtml(activeReg.placa)}</div>` : ''}
+              </div>
+            </button>
+          `;
+        });
+
+        dom.spacesGrid.innerHTML = html.join('');
+      }
+
+      function renderTableSkeleton() {
+        const rows = Array.from({ length: 4 }).map(() => `
+          <tr>
+            <td><div class="skeleton-line" style="width: 84px;"></div></td>
+            <td><div class="skeleton-line" style="width: 140px;"></div></td>
+            <td><div class="skeleton-line" style="width: 90px;"></div></td>
+            <td><div class="skeleton-line" style="width: 120px;"></div></td>
+            <td><div class="skeleton-line" style="width: 120px;"></div></td>
+            <td><div class="skeleton-line" style="width: 60px;"></div></td>
+            <td><div class="skeleton-line" style="width: 70px;"></div></td>
+            <td><div class="skeleton-line" style="width: 150px; margin-left: auto;"></div></td>
+          </tr>
+        `);
+        dom.recordsTbody.innerHTML = rows.join('');
+      }
+
+      function getFilteredRecords() {
+        const q = state.searchQuery.trim().toLowerCase();
+        return state.registros.filter((r) => {
+          const matchesEstado = state.filterEstado === 'Todos' || r.estado === state.filterEstado;
+          if (!matchesEstado) return false;
+          if (!q) return true;
+          const placa = (r.placa || '').toLowerCase();
+          const marca = (r.marca_modelo || '').toLowerCase();
+          const espacio = (r.espacio?.codigo || '').toLowerCase();
+          return placa.includes(q) || marca.includes(q) || espacio.includes(q);
+        });
+      }
+
+      function renderRecordsTable() {
+        const items = getFilteredRecords();
+
+        if (items.length === 0) {
+          const isFiltered = state.searchQuery.trim() !== '' || state.filterEstado !== 'Todos';
+          dom.recordsTbody.innerHTML = `
+            <tr>
+              <td colspan="8">
+                <div class="state-box">
+                  <p class="state-title">${isFiltered ? 'No hay coincidencias con el filtro actual' : 'No hay vehículos registrados'}</p>
+                  <p>${isFiltered ? 'Prueba con otra placa o cambia el filtro de estado.' : 'Registra el primer ingreso desde el formulario superior.'}</p>
+                  ${isFiltered
+                    ? '<button type="button" id="clearFiltersInlineBtn" class="btn btn-secondary btn-sm">Limpiar filtros</button>'
+                    : '<button type="button" id="focusFormInlineBtn" class="btn btn-primary btn-sm">Registrar primer vehículo</button>'
+                  }
+                </div>
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        const rows = items.map((r) => {
+          const isActivo = r.estado === 'Activo';
+          const statusClass = isActivo ? 'activo' : 'finalizado';
+          const duration = formatDuration(r.hora_entrada, r.hora_salida);
+
+          return `
+            <tr data-record-id="${escapeHtml(r.id)}">
+              <td class="plate-cell">${escapeHtml(r.placa)}</td>
+              <td>${escapeHtml(r.marca_modelo)}</td>
+              <td>
+                <span class="plate-cell">${escapeHtml(r.espacio.codigo)}</span>
+                <span style="color: var(--text-muted); font-size: 0.78rem;"> · ${escapeHtml(r.espacio.zona)}</span>
+              </td>
+              <td class="mono-cell">${escapeHtml(formatDisplayDateTime(r.hora_entrada))}</td>
+              <td class="mono-cell">${escapeHtml(formatDisplayDateTime(r.hora_salida))}</td>
+              <td class="mono-cell">${escapeHtml(duration)}</td>
+              <td>
+                <span class="status-text ${statusClass}">${escapeHtml(r.estado)}</span>
+              </td>
+              <td class="text-right">
+                <div class="row-actions">
+                  ${isActivo
+                    ? `<button type="button" class="btn btn-success-outline" data-action="exit" data-id="${escapeHtml(r.id)}">Registrar Salida</button>`
+                    : ''
+                  }
+                  <button type="button" class="btn btn-secondary btn-sm" data-action="edit" data-id="${escapeHtml(r.id)}">Editar</button>
+                  <button type="button" class="btn btn-danger-outline" data-action="delete" data-id="${escapeHtml(r.id)}">Eliminar</button>
+                </div>
+              </td>
+            </tr>
+          `;
+        });
+
+        dom.recordsTbody.innerHTML = rows.join('');
+      }
+
+      // =========================================================================
+      // VALIDACIÓN DEL FORMULARIO DE INGRESO
+      // =========================================================================
+      function validateEntryForm() {
+        let valid = true;
+
+        const placa = normalizePlate(dom.placaInput.value);
+        if (!placa) {
+          setFieldError(dom.placaInput, dom.placaError, 'La placa o matrícula es obligatoria.');
+          valid = false;
+        } else if (placa.length < 4 || !/^[A-Z0-9-]+$/.test(placa)) {
+          setFieldError(dom.placaInput, dom.placaError, 'Ingresa una placa válida (mínimo 4 caracteres alfanuméricos).');
+          valid = false;
+        } else {
+          setFieldError(dom.placaInput, dom.placaError, '');
+        }
+
+        const marca = dom.marcaInput.value.trim();
+        if (!marca) {
+          setFieldError(dom.marcaInput, dom.marcaError, 'La marca y modelo del vehículo son obligatorios.');
+          valid = false;
+        } else if (marca.length < 2) {
+          setFieldError(dom.marcaInput, dom.marcaError, 'Ingresa al menos 2 caracteres.');
+          valid = false;
+        } else {
+          setFieldError(dom.marcaInput, dom.marcaError, '');
+        }
+
+        const espacioId = dom.espacioSelect.value;
+        if (!espacioId) {
+          setFieldError(dom.espacioSelect, dom.espacioError, 'Debes seleccionar un espacio disponible.');
+          valid = false;
+        } else {
+          setFieldError(dom.espacioSelect, dom.espacioError, '');
+        }
+
+        const horaEntrada = dom.horaEntradaInput.value;
+        if (!horaEntrada) {
+          setFieldError(dom.horaEntradaInput, dom.horaEntradaError, 'La hora de entrada es obligatoria.');
+          valid = false;
+        } else {
+          setFieldError(dom.horaEntradaInput, dom.horaEntradaError, '');
+        }
+
+        return valid;
+      }
+
+      function resetEntryForm() {
+        dom.entryForm.reset();
+        state.selectedSpaceId = '';
+        dom.horaEntradaInput.value = toLocalDateTimeInputValue();
+        setFieldError(dom.placaInput, dom.placaError, '');
+        setFieldError(dom.marcaInput, dom.marcaError, '');
+        setFieldError(dom.espacioSelect, dom.espacioError, '');
+        setFieldError(dom.horaEntradaInput, dom.horaEntradaError, '');
+        renderSpaceOptions();
+        renderSpacesGrid();
+      }
+
+      // =========================================================================
+      // MODALES (EDITAR, ELIMINAR, CONFIGURAR SUPABASE)
+      // =========================================================================
+      function openModal(modalId) {
+        const el = document.getElementById(modalId);
+        if (!el) return;
+        el.classList.add('open');
+      }
+
+      function closeModal(modalId) {
+        const el = document.getElementById(modalId);
+        if (!el) return;
+        el.classList.remove('open');
+      }
+
+      function openEditModal(recordId) {
+        const rec = state.registros.find((r) => sameId(r.id, recordId));
+        if (!rec) return;
+
+        dom.editRecordId.value = rec.id;
+        dom.editPlacaInput.value = rec.placa;
+        dom.editMarcaInput.value = rec.marca_modelo;
+        dom.editHoraEntradaInput.value = toLocalDateTimeInputValue(rec.hora_entrada);
+        dom.editEstadoSelect.value = rec.estado;
+        dom.editHoraSalidaInput.value = rec.hora_salida
+          ? toLocalDateTimeInputValue(rec.hora_salida)
+          : toLocalDateTimeInputValue();
+
+        // Espacios seleccionables: el espacio actual del registro + todos los disponibles
+        const selectableSpaces = state.espacios.filter(
+          (s) => s.estado === 'Disponible' || sameId(s.id, rec.espacio_id)
+        );
+        dom.editEspacioSelect.innerHTML = selectableSpaces
+          .map((s) => {
+            const selected = sameId(s.id, rec.espacio_id) ? 'selected' : '';
+            const suffix = sameId(s.id, rec.espacio_id) ? ' (Actual)' : ' (Disponible)';
+            return `<option value="${escapeHtml(s.id)}" ${selected}>${escapeHtml(s.codigo)} — ${escapeHtml(s.zona)}${suffix}</option>`;
+          })
+          .join('');
+
+        toggleEditSalidaVisibility();
+        setFieldError(dom.editPlacaInput, dom.editPlacaError, '');
+        setFieldError(dom.editMarcaInput, dom.editMarcaError, '');
+        setFieldError(dom.editEspacioSelect, dom.editEspacioError, '');
+        setFieldError(dom.editHoraEntradaInput, dom.editHoraEntradaError, '');
+        setFieldError(dom.editHoraSalidaInput, dom.editHoraSalidaError, '');
+
+        openModal('editModal');
+      }
+
+      function toggleEditSalidaVisibility() {
+        const isFinalizado = dom.editEstadoSelect.value === 'Finalizado';
+        dom.editHoraSalidaGroup.style.display = isFinalizado ? 'flex' : 'none';
+      }
+
+      function openDeleteModal(recordId) {
+        const rec = state.registros.find((r) => sameId(r.id, recordId));
+        if (!rec) return;
+        state.pendingDeleteId = recordId;
+
+        dom.deleteDetailsBox.innerHTML = `
+          <div><strong>Placa:</strong> <span class="mono-cell">${escapeHtml(rec.placa)}</span></div>
+          <div><strong>Vehículo:</strong> ${escapeHtml(rec.marca_modelo)}</div>
+          <div><strong>Espacio:</strong> ${escapeHtml(rec.espacio.codigo)} (${escapeHtml(rec.estado)})</div>
+          ${rec.estado === 'Activo'
+            ? '<div style="color: var(--green-text); margin-top: 4px;">El espacio asignado quedará disponible automáticamente.</div>'
+            : ''
+          }
+        `;
+        openModal('deleteModal');
+      }
+
+      function openConfigModal() {
+        const creds = getActiveCredentials();
+        dom.cfgUrlInput.value = isConfiguredCredential(creds.url, creds.key) ? creds.url : '';
+        dom.cfgKeyInput.value = isConfiguredCredential(creds.url, creds.key) ? creds.key : '';
+        dom.sqlPreview.textContent = SQL_SCRIPT;
+        openModal('configModal');
+      }
+
+      // =========================================================================
+      // MANEJADORES DE EVENTOS
+      // =========================================================================
+      dom.headerCtaBtn.addEventListener('click', () => {
+        document.getElementById('registro').scrollIntoView({ behavior: 'smooth' });
+        setTimeout(() => {
+          if (state.formMode === 'entry') {
+            dom.placaInput.focus();
+          } else {
+            dom.exitRecordSelect.focus();
+          }
+        }, 200);
+      });
+
+      dom.modeEntryBtn.addEventListener('click', () => switchFormMode('entry'));
+      dom.modeExitBtn.addEventListener('click', () => switchFormMode('exit'));
+
+      dom.mobileMenuBtn.addEventListener('click', () => {
+        const isOpen = dom.mobileNavDrawer.classList.toggle('open');
+        dom.mobileMenuBtn.setAttribute('aria-expanded', String(isOpen));
+      });
+
+      dom.mobileNavDrawer.querySelectorAll('a').forEach((link) => {
+        link.addEventListener('click', () => {
+          dom.mobileNavDrawer.classList.remove('open');
+          dom.mobileMenuBtn.setAttribute('aria-expanded', 'false');
+        });
+      });
+
+      dom.setNowBtn.addEventListener('click', () => {
+        dom.horaEntradaInput.value = toLocalDateTimeInputValue();
+        setFieldError(dom.horaEntradaInput, dom.horaEntradaError, '');
+      });
+
+      dom.setExitNowBtn.addEventListener('click', () => {
+        dom.horaSalidaInput.value = toLocalDateTimeInputValue();
+        setFieldError(dom.horaSalidaInput, dom.horaSalidaError, '');
+        updateExitPreview();
+      });
+
+      dom.exitRecordSelect.addEventListener('change', () => {
+        setFieldError(dom.exitRecordSelect, dom.exitRecordError, '');
+        updateExitPreview();
+      });
+
+      dom.horaSalidaInput.addEventListener('input', () => {
+        setFieldError(dom.horaSalidaInput, dom.horaSalidaError, '');
+        updateExitPreview();
+      });
+
+      dom.placaInput.addEventListener('input', () => {
+        dom.placaInput.value = dom.placaInput.value.toUpperCase();
+        if (dom.placaInput.classList.contains('is-invalid')) {
+          setFieldError(dom.placaInput, dom.placaError, '');
+        }
+      });
+
+      dom.marcaInput.addEventListener('input', () => {
+        if (dom.marcaInput.classList.contains('is-invalid')) {
+          setFieldError(dom.marcaInput, dom.marcaError, '');
+        }
+      });
+
+      dom.espacioSelect.addEventListener('change', () => {
+        state.selectedSpaceId = dom.espacioSelect.value;
+        setFieldError(dom.espacioSelect, dom.espacioError, '');
+        renderSpacesGrid();
+      });
+
+      dom.formAlertClose.addEventListener('click', hideFormAlert);
+      dom.tableFeedbackClose.addEventListener('click', hideTableFeedback);
+      dom.resetFormBtn.addEventListener('click', () => {
+        resetEntryForm();
+        hideFormAlert();
+      });
+
+      dom.resetExitFormBtn.addEventListener('click', () => {
+        dom.exitForm.reset();
+        dom.horaSalidaInput.value = toLocalDateTimeInputValue();
+        setFieldError(dom.exitRecordSelect, dom.exitRecordError, '');
+        setFieldError(dom.horaSalidaInput, dom.horaSalidaError, '');
+        updateExitPreview();
+        hideFormAlert();
+      });
+
+      dom.entryForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        hideFormAlert();
+        if (!validateEntryForm()) {
+          showFormAlert('Por favor corrige los campos marcados antes de continuar.', 'error');
+          return;
+        }
+
+        dom.submitEntryBtn.disabled = true;
+        dom.submitEntryBtn.textContent = 'Registrando...';
+
+        try {
+          await createVehicleEntry({
+            placa: dom.placaInput.value,
+            marca_modelo: dom.marcaInput.value,
+            espacio_id: dom.espacioSelect.value,
+            hora_entrada: dom.horaEntradaInput.value
+          });
+          const placaGuardada = normalizePlate(dom.placaInput.value);
+          resetEntryForm();
+          await fetchAllData();
+          showFormAlert(`Entrada de vehículo ${placaGuardada} registrada correctamente.`, 'success');
+          showToast(`Entrada registrada: ${placaGuardada}`, 'success');
+        } catch (err) {
+          showFormAlert(err.message || 'No se pudo registrar la entrada.', 'error');
+          showToast('Error al registrar entrada', 'error');
+        } finally {
+          dom.submitEntryBtn.disabled = false;
+          dom.submitEntryBtn.textContent = 'Registrar Entrada';
+        }
+      });
+
+      dom.exitForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        hideFormAlert();
+
+        const recordId = dom.exitRecordSelect.value;
+        const horaSalida = dom.horaSalidaInput.value;
+        let valid = true;
+
+        if (!recordId) {
+          setFieldError(dom.exitRecordSelect, dom.exitRecordError, 'Selecciona un vehículo estacionado.');
+          valid = false;
+        } else {
+          setFieldError(dom.exitRecordSelect, dom.exitRecordError, '');
+        }
+
+        if (!horaSalida) {
+          setFieldError(dom.horaSalidaInput, dom.horaSalidaError, 'La hora de salida es obligatoria.');
+          valid = false;
+        } else {
+          setFieldError(dom.horaSalidaInput, dom.horaSalidaError, '');
+        }
+
+        if (!valid) {
+          showFormAlert('Completa los campos obligatorios para registrar la salida.', 'error');
+          return;
+        }
+
+        const rec = state.registros.find((r) => sameId(r.id, recordId));
+        dom.submitExitBtn.disabled = true;
+        dom.submitExitBtn.textContent = 'Registrando salida...';
+
+        try {
+          await registerVehicleExit(recordId, horaSalida);
+          dom.exitForm.reset();
+          dom.horaSalidaInput.value = toLocalDateTimeInputValue();
+          await fetchAllData();
+          const label = rec ? `${rec.placa} (espacio ${rec.espacio.codigo} liberado)` : 'vehículo';
+          showFormAlert(`Salida registrada para ${label}.`, 'success');
+          showToast(`Salida registrada: ${rec ? rec.placa : ''}`, 'success');
+        } catch (err) {
+          showFormAlert(err.message || 'No se pudo registrar la salida.', 'error');
+          showToast('Error al registrar salida', 'error');
+        } finally {
+          dom.submitExitBtn.disabled = false;
+          dom.submitExitBtn.textContent = 'Registrar Salida';
+        }
+      });
+
+      // Clic en grilla de espacios
+      dom.spacesGrid.addEventListener('click', (e) => {
+        const tile = e.target.closest('.space-tile');
+        if (!tile) return;
+        const id = tile.dataset.spaceId;
+        const spaceState = tile.dataset.spaceState;
+        const code = tile.dataset.spaceCode;
+
+        if (spaceState === 'Disponible') {
+          switchFormMode('entry');
+          state.selectedSpaceId = id;
+          dom.espacioSelect.value = id;
+          setFieldError(dom.espacioSelect, dom.espacioError, '');
+          renderSpacesGrid();
+          showToast(`Espacio ${code} seleccionado para entrada`);
+        } else {
+          const activeReg = state.registros.find((r) => r.estado === 'Activo' && sameId(r.espacio_id, id));
+          if (activeReg) {
+            switchFormMode('exit');
+            dom.exitRecordSelect.value = activeReg.id;
+            dom.horaSalidaInput.value = toLocalDateTimeInputValue();
+            setFieldError(dom.exitRecordSelect, dom.exitRecordError, '');
+            updateExitPreview();
+            showToast(`Vehículo ${activeReg.placa} listo para salida`);
+          } else {
+            state.searchQuery = code;
+            dom.searchInput.value = code;
+            renderRecordsTable();
+            document.getElementById('vehiculos').scrollIntoView({ behavior: 'smooth' });
+          }
+        }
+      });
+
+      // Búsqueda y filtros
+      dom.searchInput.addEventListener('input', (e) => {
+        state.searchQuery = e.target.value;
+        renderRecordsTable();
+      });
+
+      dom.filterTabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+          dom.filterTabs.forEach((t) => {
+            t.classList.remove('active');
+            t.setAttribute('aria-selected', 'false');
+          });
+          tab.classList.add('active');
+          tab.setAttribute('aria-selected', 'true');
+          state.filterEstado = tab.dataset.filter;
+          renderRecordsTable();
+        });
+      });
+
+      dom.refreshBtn.addEventListener('click', () => {
+        fetchAllData();
+        showToast('Registros actualizados');
+      });
+
+      // Delegación de acciones en la tabla (Salida, Editar, Eliminar, Empty State)
+      dom.recordsTbody.addEventListener('click', async (e) => {
+        const clearBtn = e.target.closest('#clearFiltersInlineBtn');
+        if (clearBtn) {
+          state.searchQuery = '';
+          state.filterEstado = 'Todos';
+          dom.searchInput.value = '';
+          dom.filterTabs.forEach((t) => {
+            const active = t.dataset.filter === 'Todos';
+            t.classList.toggle('active', active);
+            t.setAttribute('aria-selected', String(active));
+          });
+          renderRecordsTable();
+          return;
+        }
+
+        const focusBtn = e.target.closest('#focusFormInlineBtn');
+        if (focusBtn) {
+          document.getElementById('registro').scrollIntoView({ behavior: 'smooth' });
+          setTimeout(() => dom.placaInput.focus(), 200);
+          return;
+        }
+
+        const actionBtn = e.target.closest('[data-action]');
+        if (!actionBtn) return;
+
+        const action = actionBtn.dataset.action;
+        const id = actionBtn.dataset.id;
+
+        if (action === 'exit') {
+          actionBtn.disabled = true;
+          actionBtn.textContent = 'Procesando...';
+          try {
+            await registerVehicleExit(id);
+            await fetchAllData();
+            showToast('Salida registrada y espacio liberado', 'success');
+          } catch (err) {
+            showToast(err.message || 'No se pudo registrar la salida', 'error');
+            actionBtn.disabled = false;
+            actionBtn.textContent = 'Registrar Salida';
+          }
+        } else if (action === 'edit') {
+          openEditModal(id);
+        } else if (action === 'delete') {
+          openDeleteModal(id);
+        }
+      });
+
+      // Modal Editar
+      dom.editEstadoSelect.addEventListener('change', toggleEditSalidaVisibility);
+
+      dom.editForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const placa = normalizePlate(dom.editPlacaInput.value);
+        const marca = dom.editMarcaInput.value.trim();
+        const espacioId = dom.editEspacioSelect.value;
+        const horaEntrada = dom.editHoraEntradaInput.value;
+        const estado = dom.editEstadoSelect.value;
+        const horaSalida = dom.editHoraSalidaInput.value;
+
+        let valid = true;
+        if (!placa || placa.length < 4 || !/^[A-Z0-9-]+$/.test(placa)) {
+          setFieldError(dom.editPlacaInput, dom.editPlacaError, 'Ingresa una placa válida.');
+          valid = false;
+        } else {
+          setFieldError(dom.editPlacaInput, dom.editPlacaError, '');
+        }
+
+        if (!marca || marca.length < 2) {
+          setFieldError(dom.editMarcaInput, dom.editMarcaError, 'Ingresa marca y modelo.');
+          valid = false;
+        } else {
+          setFieldError(dom.editMarcaInput, dom.editMarcaError, '');
+        }
+
+        if (!espacioId) {
+          setFieldError(dom.editEspacioSelect, dom.editEspacioError, 'Selecciona un espacio.');
+          valid = false;
+        } else {
+          setFieldError(dom.editEspacioSelect, dom.editEspacioError, '');
+        }
+
+        if (!horaEntrada) {
+          setFieldError(dom.editHoraEntradaInput, dom.editHoraEntradaError, 'Ingresa la hora de entrada.');
+          valid = false;
+        } else {
+          setFieldError(dom.editHoraEntradaInput, dom.editHoraEntradaError, '');
+        }
+
+        if (estado === 'Finalizado' && horaSalida && new Date(horaSalida) < new Date(horaEntrada)) {
+          setFieldError(dom.editHoraSalidaInput, dom.editHoraSalidaError, 'La salida no puede ser anterior a la entrada.');
+          valid = false;
+        } else {
+          setFieldError(dom.editHoraSalidaInput, dom.editHoraSalidaError, '');
+        }
+
+        if (!valid) return;
+
+        dom.saveEditBtn.disabled = true;
+        dom.saveEditBtn.textContent = 'Guardando...';
+
+        try {
+          await updateVehicleRecord(dom.editRecordId.value, {
+            placa,
+            marca_modelo: marca,
+            espacio_id: espacioId,
+            hora_entrada: horaEntrada,
+            estado,
+            hora_salida: horaSalida
+          });
+          closeModal('editModal');
+          await fetchAllData();
+          showToast('Registro actualizado correctamente', 'success');
+        } catch (err) {
+          showToast(err.message || 'Error al actualizar el registro', 'error');
+        } finally {
+          dom.saveEditBtn.disabled = false;
+          dom.saveEditBtn.textContent = 'Guardar Cambios';
+        }
+      });
+
+      // Modal Eliminar
+      dom.confirmDeleteBtn.addEventListener('click', async () => {
+        if (!state.pendingDeleteId) return;
+        dom.confirmDeleteBtn.disabled = true;
+        dom.confirmDeleteBtn.textContent = 'Eliminando...';
+
+        try {
+          await deleteVehicleRecord(state.pendingDeleteId);
+          state.pendingDeleteId = null;
+          closeModal('deleteModal');
+          await fetchAllData();
+          showToast('Registro eliminado correctamente', 'success');
+        } catch (err) {
+          showToast(err.message || 'Error al eliminar registro', 'error');
+        } finally {
+          dom.confirmDeleteBtn.disabled = false;
+          dom.confirmDeleteBtn.textContent = 'Eliminar Registro';
+        }
+      });
+
+      // Modal Configuración Supabase
+      dom.openConfigBtn.addEventListener('click', openConfigModal);
+
+      dom.configForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const url = dom.cfgUrlInput.value.trim();
+        const key = dom.cfgKeyInput.value.trim();
+        if (!url.startsWith('http') || key.length < 20) {
+          showToast('Ingresa una URL y una clave anon válidas', 'error');
+          return;
+        }
+        localStorage.setItem(LS_CFG_KEY, JSON.stringify({ url, key }));
+        initDatabaseClient();
+        closeModal('configModal');
+        await fetchAllData();
+        showToast('Conectado a Supabase PostgreSQL', 'success');
+      });
+
+      dom.clearConfigBtn.addEventListener('click', async () => {
+        localStorage.removeItem(LS_CFG_KEY);
+        dom.cfgUrlInput.value = '';
+        dom.cfgKeyInput.value = '';
+        initDatabaseClient();
+        closeModal('configModal');
+        await fetchAllData();
+        showToast('Modo local persistente activado');
+      });
+
+      dom.copySqlBtn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(SQL_SCRIPT);
+          showToast('Script SQL copiado al portapapeles', 'success');
+        } catch (_) {
+          showToast('Selecciona y copia el bloque SQL manualmente');
+        }
+      });
+
+      // Cerrar modales por botón, clic fuera o tecla Escape
+      document.querySelectorAll('[data-close-modal]').forEach((btn) => {
+        btn.addEventListener('click', () => closeModal(btn.dataset.closeModal));
+      });
+
+      document.querySelectorAll('.modal-backdrop').forEach((backdrop) => {
+        backdrop.addEventListener('click', (e) => {
+          if (e.target === backdrop) backdrop.classList.remove('open');
+        });
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          document.querySelectorAll('.modal-backdrop.open').forEach((m) => m.classList.remove('open'));
+        }
+      });
+
+      // =========================================================================
+      // ARRANQUE INICIAL
+      // =========================================================================
+      dom.horaEntradaInput.value = toLocalDateTimeInputValue();
+      dom.horaSalidaInput.value = toLocalDateTimeInputValue();
+      initDatabaseClient();
+      fetchAllData();
+    })();
+  </script>
+</body>
+</html>

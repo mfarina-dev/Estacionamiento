@@ -1,0 +1,6 @@
+{
+  "name": "Sistema de Gestión de Estacionamiento",
+  "description": "Aplicación web funcional para el registro, control de espacios y gestión CRUD de vehículos en estacionamiento con Supabase.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
